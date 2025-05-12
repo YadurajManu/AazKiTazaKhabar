@@ -15,6 +15,10 @@ class NewsService {
     // Add Currents API base if needed
     
     private let session = URLSession.shared
+    private let aiService = AIService.shared
+    
+    // Flag to enable/disable AI features
+    private var useAI = false
     
     // MARK: - Public API
     func fetchAllNews(completion: @escaping ([NewsArticle]) -> Void) {
@@ -43,7 +47,25 @@ class NewsService {
             let unique = Array(Set(allArticles)).sorted { $0.publishedAt > $1.publishedAt }
             // Only articles with images
             let filtered = unique.filter { $0.imageUrl != nil && !$0.imageUrl!.isEmpty }
-            completion(filtered)
+            
+            // Apply AI processing if enabled
+            if self.useAI {
+                Task {
+                    do {
+                        let enhancedArticles = try await self.processArticlesWithAI(articles: filtered)
+                        DispatchQueue.main.async {
+                            completion(enhancedArticles)
+                        }
+                    } catch {
+                        print("AI processing error: \(error)")
+                        DispatchQueue.main.async {
+                            completion(filtered)
+                        }
+                    }
+                }
+            } else {
+                completion(filtered)
+            }
         }
     }
     

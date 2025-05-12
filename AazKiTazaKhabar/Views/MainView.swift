@@ -82,18 +82,21 @@ struct NewsFeedView: View {
                 if !searchExpanded {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 12) {
+                            // Region filters
                             ForEach(["All", "Indian", "Global"], id: \.self) { region in
                                 FilterChip(label: region, selected: viewModel.selectedRegion == region) {
                                     viewModel.setRegion(region)
                                 }
                             }
                             
-                            Divider()
-                                .frame(height: 24)
-                                .background(Color.white.opacity(0.3))
+                            // Divider between region and category filters
+                            Rectangle()
+                                .fill(Color.white.opacity(0.1))
+                                .frame(width: 1, height: 24)
                                 .padding(.horizontal, 4)
                             
-                            ForEach(["All", "Politics", "Sports", "Technology", "Business", "Entertainment", "Health", "Science"], id: \.self) { category in
+                            // Category filters
+                            ForEach(["All", "Politics", "Business", "Technology", "Entertainment", "Sports", "Health", "Science", "General"], id: \.self) { category in
                                 FilterChip(label: category, selected: viewModel.selectedCategory == category) {
                                     viewModel.setCategory(category)
                                 }
@@ -229,21 +232,36 @@ struct FilterChip: View {
     let label: String
     var selected: Bool
     var action: () -> Void
+    @State private var isHovering = false
+    
     var body: some View {
         Button(action: action) {
             Text(label)
-                .font(.system(size: 15, weight: .medium))
-                .foregroundColor(selected ? .black : .white.opacity(0.8))
+                .font(.system(size: 15, weight: selected ? .medium : .regular))
+                .foregroundColor(selected ? .black : .white.opacity(0.9))
                 .padding(.horizontal, 16)
                 .padding(.vertical, 7)
-                .background(selected ? Color.white : Color.white.opacity(0.08))
-                .cornerRadius(16)
+                .background(
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(selected ? Color.white : Color.white.opacity(isHovering ? 0.08 : 0.04))
+                )
                 .overlay(
                     RoundedRectangle(cornerRadius: 16)
-                        .stroke(selected ? Color.white : Color.clear, lineWidth: 1.2)
+                        .stroke(
+                            LinearGradient(
+                                gradient: Gradient(colors: [.white.opacity(0.2), .white.opacity(0.1)]),
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 0.5
+                        )
+                        .opacity(selected || isHovering ? 1 : 0.5)
                 )
+                .scaleEffect(selected ? 1.05 : 1.0)
+                .animation(.spring(response: 0.3, dampingFraction: 0.7), value: selected)
         }
         .buttonStyle(PlainButtonStyle())
+        .hoverEffect($isHovering)
     }
 }
 
@@ -353,9 +371,21 @@ struct NewsCardView: View {
                         .font(.system(size: 12, weight: .semibold))
                         .padding(.horizontal, 10)
                         .padding(.vertical, 5)
-                        .background(Color.blue.opacity(0.2))
-                        .foregroundColor(.blue)
+                        .background(Color.white.opacity(0.05))
+                        .foregroundColor(.white)
                         .cornerRadius(12)
+                    
+                    Text(article.detectedCategory)
+                        .font(.system(size: 12, weight: .semibold))
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(Color.white.opacity(0.05))
+                        .foregroundColor(categoryColor(article.detectedCategory))
+                        .cornerRadius(12)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(Color.white.opacity(0.1), lineWidth: 0.5)
+                        )
                     
                     Spacer()
                     
@@ -508,6 +538,27 @@ struct NewsCardView: View {
         let formatter = RelativeDateTimeFormatter()
         formatter.unitsStyle = .short
         return formatter.localizedString(for: date, relativeTo: Date())
+    }
+    
+    private func categoryColor(_ category: String) -> Color {
+        switch category {
+        case "Politics":
+            return .white.opacity(0.9)
+        case "Sports":
+            return .green.opacity(0.9)
+        case "Technology":
+            return .blue.opacity(0.9)
+        case "Business":
+            return .orange.opacity(0.9)
+        case "Entertainment":
+            return .purple.opacity(0.9)
+        case "Health":
+            return .red.opacity(0.9)
+        case "Science":
+            return .yellow.opacity(0.9)
+        default:
+            return .gray.opacity(0.9)
+        }
     }
 }
 
@@ -776,9 +827,19 @@ struct BookmarkCard: View {
                         .foregroundColor(.white)
                         .lineLimit(3)
                     
-                    Text(article.source)
-                        .font(.caption)
-                        .foregroundColor(.gray)
+                    HStack {
+                        Text(article.source)
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                        
+                        Text(article.detectedCategory)
+                            .font(.caption)
+                            .foregroundColor(categoryColor(article.detectedCategory))
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color.white.opacity(0.05))
+                            .cornerRadius(8)
+                    }
                     
                     HStack {
                         Image(systemName: "calendar")
@@ -834,6 +895,27 @@ struct BookmarkCard: View {
         .padding()
         .background(Color.white.opacity(0.1))
         .cornerRadius(12)
+    }
+    
+    private func categoryColor(_ category: String) -> Color {
+        switch category {
+        case "Politics":
+            return .white.opacity(0.9)
+        case "Sports":
+            return .green.opacity(0.9)
+        case "Technology":
+            return .blue.opacity(0.9)
+        case "Business":
+            return .orange.opacity(0.9)
+        case "Entertainment":
+            return .purple.opacity(0.9)
+        case "Health":
+            return .red.opacity(0.9)
+        case "Science":
+            return .yellow.opacity(0.9)
+        default:
+            return .gray.opacity(0.9)
+        }
     }
 }
 

@@ -474,7 +474,7 @@ struct ProfileView: View {
                                                         .progressViewStyle(CircularProgressViewStyle(tint: .black))
                                                         .scaleEffect(0.8)
                                                         .padding(.trailing, 6)
-                                                }
+                                            }
                                                 
                                                 Text("Save")
                                                     .foregroundColor(.black)
@@ -1063,9 +1063,19 @@ struct SavedArticleCard: View {
                         .foregroundColor(.white)
                         .lineLimit(3)
                     
-                    Text(article.source)
-                        .font(.system(size: 12, weight: .light))
-                        .foregroundColor(.gray)
+                    HStack {
+                        Text(article.source)
+                            .font(.system(size: 12, weight: .light))
+                            .foregroundColor(.gray)
+                        
+                        Text(article.detectedCategory)
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(categoryColor(article.detectedCategory))
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color.white.opacity(0.05))
+                            .cornerRadius(8)
+                    }
                     
                     HStack {
                         Image(systemName: "calendar")
@@ -1099,7 +1109,10 @@ struct SavedArticleCard: View {
                 
                 Spacer()
                 
-                Button(action: onRemove) {
+                Button(action: {
+                    isRemoving = true
+                    onRemove()
+                }) {
                     HStack {
                         if isRemoving {
                             ProgressView()
@@ -1143,6 +1156,27 @@ struct SavedArticleCard: View {
                 )
         )
         .hoverEffect($isHovering)
+    }
+    
+    private func categoryColor(_ category: String) -> Color {
+        switch category {
+        case "Politics":
+            return .white.opacity(0.9)
+        case "Sports":
+            return .green.opacity(0.9)
+        case "Technology":
+            return .blue.opacity(0.9)
+        case "Business":
+            return .orange.opacity(0.9)
+        case "Entertainment":
+            return .purple.opacity(0.9)
+        case "Health":
+            return .red.opacity(0.9)
+        case "Science":
+            return .yellow.opacity(0.9)
+        default:
+            return .gray.opacity(0.9)
+        }
     }
 }
 

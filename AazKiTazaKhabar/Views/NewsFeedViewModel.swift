@@ -32,12 +32,16 @@ class NewsFeedViewModel: ObservableObject {
         
         // Apply region filter
         if region != "All" {
-            // This is placeholder logic - adapt based on your actual data model
             filtered = filtered.filter { article in
                 if region == "Indian" {
-                    return article.source.contains("India") || article.source.lowercased().contains("india")
+                    return article.source.contains("India") || 
+                           article.source.lowercased().contains("india") || 
+                           article.title.lowercased().contains("india") ||
+                           article.description.lowercased().contains("india")
                 } else if region == "Global" {
-                    return !article.source.contains("India") && !article.source.lowercased().contains("india")
+                    return !article.source.lowercased().contains("india") && 
+                           !article.title.lowercased().contains("india") &&
+                           !article.description.lowercased().contains("india")
                 }
                 return true
             }
@@ -45,10 +49,9 @@ class NewsFeedViewModel: ObservableObject {
         
         // Apply category filter
         if category != "All" {
-            // This is placeholder logic - adapt based on your actual data model
             filtered = filtered.filter { article in
-                article.title.lowercased().contains(category.lowercased()) ||
-                article.description.lowercased().contains(category.lowercased())
+                // Use the detected category for more accurate filtering
+                return article.detectedCategory == category
             }
         }
         
@@ -57,7 +60,8 @@ class NewsFeedViewModel: ObservableObject {
             filtered = filtered.filter { article in
                 article.title.lowercased().contains(searchText.lowercased()) ||
                 article.description.lowercased().contains(searchText.lowercased()) ||
-                article.source.lowercased().contains(searchText.lowercased())
+                article.source.lowercased().contains(searchText.lowercased()) ||
+                article.detectedCategory.lowercased().contains(searchText.lowercased())
             }
         }
         
