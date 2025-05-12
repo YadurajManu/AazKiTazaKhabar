@@ -26,6 +26,7 @@ struct ProfileView: View {
     @State private var isDeletingAccount = false
     @State private var errorMessage: String? = nil
     @State private var showBookmarks = false
+    @State private var bookmarkCount = 0
     
     var body: some View {
         ZStack {
@@ -39,7 +40,7 @@ struct ProfileView: View {
                         Rectangle()
                             .fill(
                                 LinearGradient(
-                                    gradient: Gradient(colors: [Color.blue.opacity(0.8), Color.purple.opacity(0.7)]),
+                                    gradient: Gradient(colors: [Color.white.opacity(0.1), Color.white.opacity(0.05)]),
                                     startPoint: .topLeading,
                                     endPoint: .bottomTrailing
                                 )
@@ -51,8 +52,19 @@ struct ProfileView: View {
                             // Profile Photo with animation
                             ZStack {
                                 Circle()
-                                    .fill(Color.white.opacity(0.2))
+                                    .fill(Color.white.opacity(0.05))
                                     .frame(width: 110, height: 110)
+                                    .overlay(
+                                        Circle()
+                                            .stroke(
+                                                LinearGradient(
+                                                    gradient: Gradient(colors: [.white.opacity(0.2), .white.opacity(0.05)]),
+                                                    startPoint: .topLeading,
+                                                    endPoint: .bottomTrailing
+                                                ),
+                                                lineWidth: 1
+                                            )
+                                    )
                                 
                                 if let photoURL = authService.user?.photoURL {
                                     AsyncImage(url: photoURL) { phase in
@@ -77,12 +89,12 @@ struct ProfileView: View {
                                     }
                                     .frame(width: 100, height: 100)
                                     .clipShape(Circle())
-                                    .overlay(Circle().stroke(Color.white, lineWidth: 2))
+                                    .overlay(Circle().stroke(Color.white.opacity(0.1), lineWidth: 1))
                                 } else {
                                     Image(systemName: "person.circle.fill")
                                         .resizable()
                                         .frame(width: 100, height: 100)
-                                        .foregroundColor(.white)
+                                        .foregroundColor(.white.opacity(0.7))
                                 }
                                 
                                 // Edit profile button overlay
@@ -93,28 +105,33 @@ struct ProfileView: View {
                                 }) {
                                     ZStack {
                                         Circle()
-                                            .fill(Color.black.opacity(0.6))
+                                            .fill(Color.black)
                                             .frame(width: 32, height: 32)
+                                            .overlay(
+                                                Circle()
+                                                    .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                                            )
                                         
                                         Image(systemName: "pencil")
-                                            .font(.system(size: 12, weight: .bold))
+                                            .font(.system(size: 12, weight: .medium))
                                             .foregroundColor(.white)
                                     }
                                 }
+                                .buttonStyle(ScaleButtonStyle())
                                 .offset(x: 35, y: 35)
                             }
                             .padding(.top, 30)
                             
                             // Name with improved typography
                             Text(authService.user?.displayName ?? "No Name")
-                                .font(.system(size: 24, weight: .bold))
+                                .font(.system(size: 24, weight: .medium))
                                 .foregroundColor(.white)
-                                .shadow(color: .black.opacity(0.2), radius: 2, x: 0, y: 1)
+                                .shadow(color: .black.opacity(0.1), radius: 1, x: 0, y: 1)
                             
                             // Email with subtle styling
                             Text(authService.user?.email ?? "No email")
-                                .font(.system(size: 14))
-                                .foregroundColor(.white.opacity(0.8))
+                                .font(.system(size: 14, weight: .light))
+                                .foregroundColor(.white.opacity(0.7))
                                 .padding(.bottom, 12)
                         }
                         .padding(.top, 20)
@@ -124,7 +141,7 @@ struct ProfileView: View {
                     // Stats section
                     HStack(spacing: 0) {
                         StatCard(value: "0", label: "Articles Read", icon: "book.fill", color: .blue)
-                        StatCard(value: "0", label: "Bookmarks", icon: "bookmark.fill", color: .orange)
+                        StatCard(value: "\(bookmarkCount)", label: "Bookmarks", icon: "bookmark.fill", color: .orange)
                         StatCard(value: "0", label: "Categories", icon: "folder.fill", color: .green)
                     }
                     .padding(.horizontal)
@@ -137,20 +154,35 @@ struct ProfileView: View {
                         showBookmarks = true
                     }) {
                         HStack {
-                            Image(systemName: "bookmark.fill")
-                                .foregroundColor(.blue)
+                            Image(systemName: "bookmark")
+                                .foregroundColor(.white)
+                                .frame(width: 24, height: 24)
                             Text("Saved Articles")
                                 .foregroundColor(.white)
                             Spacer()
                             Image(systemName: "chevron.right")
-                                .foregroundColor(.gray)
+                                .foregroundColor(.white.opacity(0.5))
                                 .font(.system(size: 14))
                         }
                         .padding(.vertical, 12)
                         .padding(.horizontal, 16)
-                        .background(Color.white.opacity(0.1))
-                        .cornerRadius(10)
+                        .background(
+                            RoundedRectangle(cornerRadius: 10)
+                                .fill(Color.white.opacity(0.03))
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10)
+                                .stroke(
+                                    LinearGradient(
+                                        gradient: Gradient(colors: [.white.opacity(0.1), .white.opacity(0.05)]),
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    ),
+                                    lineWidth: 0.5
+                                )
+                        )
                     }
+                    .buttonStyle(ScaleButtonStyle())
                     .padding(.horizontal, 16)
                     .sheet(isPresented: $showBookmarks) {
                         BookmarksProfileView()
@@ -161,297 +193,312 @@ struct ProfileView: View {
                         showUserPreferences = true
                     }) {
                         HStack {
-                            Image(systemName: "gearshape.fill")
-                                .foregroundColor(.orange)
+                            Image(systemName: "gearshape")
+                                .foregroundColor(.white)
+                                .frame(width: 24, height: 24)
                             Text("App Preferences")
                                 .foregroundColor(.white)
                             Spacer()
                             Image(systemName: "chevron.right")
-                                .foregroundColor(.gray)
+                                .foregroundColor(.white.opacity(0.5))
                                 .font(.system(size: 14))
                         }
                         .padding(.vertical, 12)
                         .padding(.horizontal, 16)
-                        .background(Color.white.opacity(0.1))
-                        .cornerRadius(10)
+                        .background(
+                            RoundedRectangle(cornerRadius: 10)
+                                .fill(Color.white.opacity(0.03))
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10)
+                                .stroke(
+                                    LinearGradient(
+                                        gradient: Gradient(colors: [.white.opacity(0.1), .white.opacity(0.05)]),
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    ),
+                                    lineWidth: 0.5
+                                )
+                        )
                     }
+                    .buttonStyle(ScaleButtonStyle())
                     .padding(.horizontal, 16)
                     .sheet(isPresented: $showUserPreferences) {
-                        VStack(spacing: 20) {
-                            Text("App Preferences").font(.title2).bold()
-                            
-                            // Notification Preferences
-                            Toggle("Enable Notifications", isOn: $notificationsEnabled)
-                                .padding()
-                                .background(Color.white.opacity(0.1))
-                                .cornerRadius(10)
-                            
-                            // Dark Mode Toggle
-                            Toggle("Dark Mode", isOn: $darkModeEnabled)
-                                .padding()
-                                .background(Color.white.opacity(0.1))
-                                .cornerRadius(10)
-                            
-                            // Region Preference
-                            VStack(alignment: .leading) {
-                                Text("News Region")
-                                    .font(.headline)
-                                Picker("Region", selection: $selectedRegion) {
-                                    Text("India").tag("India")
-                                    Text("Global").tag("Global")
-                                    Text("Both").tag("Both")
-                                }
-                                .pickerStyle(SegmentedPickerStyle())
-                            }
-                            .padding()
-                            .background(Color.white.opacity(0.1))
-                            .cornerRadius(10)
-                            
-                            Button("Save Preferences") {
-                                isUpdatingPreferences = true
-                                Task {
-                                    do {
-                                        try await authService.saveUserPreferences(
-                                            notificationsEnabled: notificationsEnabled,
-                                            darkModeEnabled: darkModeEnabled,
-                                            region: selectedRegion
-                                        )
-                                        showUserPreferences = false
-                                    } catch {
-                                        errorMessage = "Failed to save preferences: \(error.localizedDescription)"
-                                    }
-                                    isUpdatingPreferences = false
-                                }
-                            }
-                            .disabled(isUpdatingPreferences)
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 24)
-                            .padding(.vertical, 12)
-                            .background(Color.blue)
-                            .cornerRadius(8)
-                            
-                            if let errorMessage = errorMessage {
-                                Text(errorMessage)
-                                    .foregroundColor(.red)
-                                    .font(.caption)
-                            }
-                            
-                            Spacer()
-                        }
-                        .padding()
-                        .preferredColorScheme(.dark)
-                    }
-                    
-                    // Profile editing sheet
-                    .sheet(isPresented: $showEditProfile) {
                         ZStack {
                             Color.black.ignoresSafeArea()
                             
-                            VStack(spacing: 24) {
-                                // Header
-                                Text("Edit Profile")
-                                    .font(.system(size: 24, weight: .bold))
-                                    .foregroundColor(.white)
-                                    .padding(.top, 20)
-                                
-                                Spacer().frame(height: 20)
-                                
-                                // Profile Photo with upload button
-                                ZStack {
-                                    Circle()
-                                        .fill(Color.white.opacity(0.1))
-                                        .frame(width: 120, height: 120)
+                            VStack(spacing: 0) {
+                                // Header with close button
+                                HStack {
+                                    Text("App Preferences")
+                                        .font(.system(size: 24, weight: .bold))
+                                        .foregroundColor(.white)
                                     
-                                    if let url = newPhotoURL {
-                                        AsyncImage(url: url) { phase in
-                                            switch phase {
-                                            case .empty:
-                                                ProgressView()
-                                                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                                            case .success(let image):
-                                                image
-                                                    .resizable()
-                                                    .aspectRatio(contentMode: .fill)
-                                                    .transition(.opacity)
-                                            case .failure:
-                                                Image(systemName: "person.circle.fill")
-                                                    .resizable()
-                                                    .foregroundColor(.gray)
-                                                    .padding(20)
-                                            @unknown default:
-                                                Image(systemName: "person.circle.fill")
-                                                    .resizable()
-                                                    .foregroundColor(.gray)
-                                                    .padding(20)
-                                            }
-                                        }
-                                        .frame(width: 110, height: 110)
-                                        .clipShape(Circle())
-                                    } else {
-                                        Image(systemName: "person.circle.fill")
-                                            .resizable()
-                                            .frame(width: 80, height: 80)
+                                    Spacer()
+                                    
+                                    Button(action: {
+                                        showUserPreferences = false
+                                    }) {
+                                        Image(systemName: "xmark.circle.fill")
+                                            .font(.system(size: 24))
                                             .foregroundColor(.gray)
                                     }
-                                    
-                                    // Camera upload button
-                                    Button(action: {
-                                        // Add photo picker logic here
-                                        // This would integrate with PhotosUI for image selection
-                                    }) {
-                                        ZStack {
-                                            Circle()
-                                                .fill(Color.blue)
-                                                .frame(width: 36, height: 36)
-                                            
-                                            Image(systemName: "camera.fill")
-                                                .font(.system(size: 16))
-                                                .foregroundColor(.white)
-                                        }
-                                    }
-                                    .offset(x: 40, y: 40)
-                                    .shadow(color: .black.opacity(0.3), radius: 4, x: 0, y: 2)
                                 }
+                                .padding(.horizontal, 24)
+                                .padding(.top, 24)
                                 .padding(.bottom, 20)
                                 
-                                // Display Name Field with floating label
-                                VStack(alignment: .leading, spacing: 6) {
-                                    Text("Display Name")
-                                        .font(.system(size: 14))
-                                        .foregroundColor(.gray)
-                                    
-                                    TextField("", text: $newDisplayName)
-                                        .font(.system(size: 17))
-                                        .foregroundColor(.white)
-                                        .padding(.vertical, 14)
-                                        .padding(.horizontal, 16)
-                                        .background(
-                                            RoundedRectangle(cornerRadius: 12)
-                                                .fill(Color.white.opacity(0.1))
-                                        )
-                                        .overlay(
-                                            RoundedRectangle(cornerRadius: 12)
-                                                .stroke(Color.blue.opacity(0.5), lineWidth: 1)
-                                        )
+                                ScrollView {
+                                    VStack(spacing: 24) {
+                                        // Appearance Section
+                                        PreferenceSection(title: "Appearance") {
+                                            // Theme preference (light/dark)
+                                            HStack {
+                                                Image(systemName: "moon.fill")
+                                                    .foregroundColor(.purple)
+                                                    .frame(width: 30)
+                                                
+                                                Text("Dark Mode")
+                                                    .font(.system(size: 16))
+                                                    .foregroundColor(.white)
+                                                
+                                                Spacer()
+                                                
+                                                Toggle("", isOn: $darkModeEnabled)
+                                                    .toggleStyle(SwitchToggleStyle(tint: .blue))
+                                                    .labelsHidden()
+                                            }
+                                            .padding()
+                                            .background(Color.white.opacity(0.08))
+                                            .cornerRadius(12)
+                                            
+                                            // Text Size
+                                            HStack {
+                                                Image(systemName: "textformat.size")
+                                                    .foregroundColor(.blue)
+                                                    .frame(width: 30)
+                                                
+                                                Text("Text Size")
+                                                    .font(.system(size: 16))
+                                                    .foregroundColor(.white)
+                                                
+                                                Spacer()
+                                                
+                                                Picker("", selection: .constant(2)) {
+                                                    Text("Small").tag(1)
+                                                    Text("Medium").tag(2)
+                                                    Text("Large").tag(3)
+                                                }
+                                                .pickerStyle(SegmentedPickerStyle())
+                                                .frame(width: 180)
+                                            }
+                                            .padding()
+                                            .background(Color.white.opacity(0.08))
+                                            .cornerRadius(12)
+                                        }
+                                        
+                                        // Notifications Section
+                                        PreferenceSection(title: "Notifications") {
+                                            // Push notifications toggle
+                                            HStack {
+                                                Image(systemName: "bell.fill")
+                                                    .foregroundColor(.orange)
+                                                    .frame(width: 30)
+                                                
+                                                VStack(alignment: .leading, spacing: 4) {
+                                                    Text("Push Notifications")
+                                                        .font(.system(size: 16))
+                                                        .foregroundColor(.white)
+                                                    
+                                                    Text("Get real-time news alerts")
+                                                        .font(.system(size: 12))
+                                                        .foregroundColor(.gray)
+                                                }
+                                                
+                                                Spacer()
+                                                
+                                                Toggle("", isOn: $notificationsEnabled)
+                                                    .toggleStyle(SwitchToggleStyle(tint: .blue))
+                                                    .labelsHidden()
+                                            }
+                                            .padding()
+                                            .background(Color.white.opacity(0.08))
+                                            .cornerRadius(12)
+                                            
+                                            // Breaking news toggle
+                                            HStack {
+                                                Image(systemName: "exclamationmark.triangle.fill")
+                                                    .foregroundColor(.red)
+                                                    .frame(width: 30)
+                                                
+                                                VStack(alignment: .leading, spacing: 4) {
+                                                    Text("Breaking News Only")
+                                                        .font(.system(size: 16))
+                                                        .foregroundColor(.white)
+                                                    
+                                                    Text("Limit alerts to breaking news")
+                                                        .font(.system(size: 12))
+                                                        .foregroundColor(.gray)
+                                                }
+                                                
+                                                Spacer()
+                                                
+                                                Toggle("", isOn: .constant(true))
+                                                    .toggleStyle(SwitchToggleStyle(tint: .blue))
+                                                    .labelsHidden()
+                                                    .disabled(!notificationsEnabled)
+                                            }
+                                            .padding()
+                                            .background(Color.white.opacity(0.08))
+                                            .cornerRadius(12)
+                                            .opacity(notificationsEnabled ? 1 : 0.5)
+                                        }
+                                        
+                                        // Content Section
+                                        PreferenceSection(title: "Content") {
+                                            // Region preference
+                                            VStack(alignment: .leading, spacing: 8) {
+                                                HStack {
+                                                    Image(systemName: "globe")
+                                                        .foregroundColor(.green)
+                                                        .frame(width: 30)
+                                                    
+                                                    Text("News Region")
+                                                        .font(.system(size: 16))
+                                                        .foregroundColor(.white)
+                                                    
+                                                    Spacer()
+                                                }
+                                                
+                                                HStack(spacing: 10) {
+                                                    ForEach(["India", "Global", "Both"], id: \.self) { region in
+                                                        Button(action: {
+                                                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                                                selectedRegion = region
+                                                            }
+                                                        }) {
+                                                            Text(region)
+                                                                .font(.system(size: 14, weight: selectedRegion == region ? .semibold : .regular))
+                                                                .foregroundColor(selectedRegion == region ? .black : .white)
+                                                                .padding(.horizontal, 16)
+                                                                .padding(.vertical, 8)
+                                                                .background(
+                                                                    RoundedRectangle(cornerRadius: 20)
+                                                                        .fill(selectedRegion == region ? Color.white : Color.white.opacity(0.1))
+                                                                )
+                                                        }
+                                                        .buttonStyle(PlainButtonStyle())
+                                                    }
+                                                }
+                                            }
+                                            .padding()
+                                            .background(Color.white.opacity(0.08))
+                                            .cornerRadius(12)
+                                            
+                                            // Language preference
+                                            HStack {
+                                                Image(systemName: "character.bubble")
+                                                    .foregroundColor(.cyan)
+                                                    .frame(width: 30)
+                                                
+                                                Text("Language")
+                                                    .font(.system(size: 16))
+                                                    .foregroundColor(.white)
+                                                
+                                                Spacer()
+                                                
+                                                Menu {
+                                                    Button("English", action: {})
+                                                    Button("Hindi", action: {})
+                                                    Button("Telugu", action: {})
+                                                    Button("Tamil", action: {})
+                                                    Button("Bengali", action: {})
+                                                } label: {
+                                                    HStack {
+                                                        Text("English")
+                                                        Image(systemName: "chevron.down")
+                                                            .font(.system(size: 14))
+                                                    }
+                                                    .foregroundColor(.white)
+                                                    .padding(.horizontal, 12)
+                                                    .padding(.vertical, 6)
+                                                    .background(Color.white.opacity(0.1))
+                                                    .cornerRadius(8)
+                                                }
+                                            }
+                                            .padding()
+                                            .background(Color.white.opacity(0.08))
+                                            .cornerRadius(12)
+                                        }
+                                    }
+                                    .padding(.horizontal, 24)
+                                    .padding(.bottom, 100)
                                 }
-                                .padding(.horizontal, 24)
                                 
-                                // User Name (optional)
-                                VStack(alignment: .leading, spacing: 6) {
-                                    Text("Username (Optional)")
-                                        .font(.system(size: 14))
-                                        .foregroundColor(.gray)
+                                // Save Button Area (fixed at bottom)
+                                VStack {
+                                    Divider()
+                                        .background(Color.white.opacity(0.1))
                                     
                                     HStack {
-                                        Text("@")
-                                            .foregroundColor(.gray)
+                                        Button(action: {
+                                            showUserPreferences = false
+                                        }) {
+                                            Text("Cancel")
+                                                .foregroundColor(.white)
+                                                .padding(.vertical, 14)
+                                                .frame(maxWidth: .infinity)
+                                                .background(Color.white.opacity(0.1))
+                                                .cornerRadius(12)
+                                        }
                                         
-                                        TextField("username", text: .constant(""))
-                                            .font(.system(size: 17))
-                                            .foregroundColor(.white)
-                                    }
-                                    .padding(.vertical, 14)
-                                    .padding(.horizontal, 16)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 12)
-                                            .fill(Color.white.opacity(0.1))
-                                    )
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 12)
-                                            .stroke(Color.white.opacity(0.1), lineWidth: 1)
-                                    )
-                                }
-                                .padding(.horizontal, 24)
-                                
-                                // Bio (optional)
-                                VStack(alignment: .leading, spacing: 6) {
-                                    Text("Bio (Optional)")
-                                        .font(.system(size: 14))
-                                        .foregroundColor(.gray)
-                                    
-                                    TextEditor(text: .constant(""))
-                                        .frame(height: 100)
-                                        .font(.system(size: 17))
-                                        .foregroundColor(.white)
-                                        .padding(.horizontal, 12)
-                                        .padding(.vertical, 8)
-                                        .background(
-                                            RoundedRectangle(cornerRadius: 12)
-                                                .fill(Color.white.opacity(0.1))
-                                        )
-                                        .overlay(
-                                            RoundedRectangle(cornerRadius: 12)
-                                                .stroke(Color.white.opacity(0.1), lineWidth: 1)
-                                        )
-                                }
-                                .padding(.horizontal, 24)
-                                
-                                Spacer()
-                                
-                                // Action Buttons
-                                HStack(spacing: 16) {
-                                    // Cancel Button
-                                    Button(action: {
-                                        showEditProfile = false
-                                    }) {
-                                        Text("Cancel")
-                                            .font(.system(size: 16, weight: .medium))
-                                            .foregroundColor(.white)
+                                        Button(action: {
+                                            isUpdatingPreferences = true
+                                            Task {
+                                                do {
+                                                    try await authService.saveUserPreferences(
+                                                        notificationsEnabled: notificationsEnabled,
+                                                        darkModeEnabled: darkModeEnabled,
+                                                        region: selectedRegion
+                                                    )
+                                                    showUserPreferences = false
+                                                } catch {
+                                                    errorMessage = "Failed to save preferences: \(error.localizedDescription)"
+                                                }
+                                                isUpdatingPreferences = false
+                                            }
+                                        }) {
+                                            HStack {
+                                                if isUpdatingPreferences {
+                                                    ProgressView()
+                                                        .progressViewStyle(CircularProgressViewStyle(tint: .black))
+                                                        .scaleEffect(0.8)
+                                                        .padding(.trailing, 6)
+                                                }
+                                                
+                                                Text("Save")
+                                                    .foregroundColor(.black)
+                                            }
                                             .padding(.vertical, 14)
                                             .frame(maxWidth: .infinity)
-                                            .background(
-                                                RoundedRectangle(cornerRadius: 12)
-                                                    .fill(Color.white.opacity(0.1))
-                                            )
-                                    }
-                                    
-                                    // Save Button
-                                    Button(action: {
-                                        isSaving = true
-                                        saveError = nil
-                                        Task {
-                                            do {
-                                                try await authService.updateDisplayName(newDisplayName)
-                                                // TODO: Add upload photo logic here when implemented
-                                                showEditProfile = false
-                                            } catch {
-                                                saveError = error.localizedDescription
-                                            }
-                                            isSaving = false
+                                            .background(Color.white)
+                                            .cornerRadius(12)
+                                            .opacity(isUpdatingPreferences ? 0.7 : 1.0)
                                         }
-                                    }) {
-                                        HStack {
-                                            if isSaving {
-                                                ProgressView()
-                                                    .progressViewStyle(CircularProgressViewStyle(tint: .black))
-                                                    .scaleEffect(0.8)
-                                                    .padding(.trailing, 6)
-                                            }
-                                            
-                                            Text("Save Changes")
-                                                .font(.system(size: 16, weight: .medium))
-                                                .foregroundColor(.black)
-                                        }
-                                        .padding(.vertical, 14)
-                                        .frame(maxWidth: .infinity)
-                                        .background(
-                                            RoundedRectangle(cornerRadius: 12)
-                                                .fill(Color.white)
-                                        )
-                                        .opacity(isSaving ? 0.7 : 1.0)
+                                        .disabled(isUpdatingPreferences)
                                     }
-                                    .disabled(isSaving || newDisplayName.isEmpty)
+                                    .padding(.horizontal, 24)
+                                    .padding(.vertical, 16)
+                                    .background(Color.black)
                                 }
-                                .padding(.horizontal, 24)
-                                .padding(.bottom, 32)
                             }
                             
                             // Error message
-                            if let error = saveError {
+                            if let errorMessage = errorMessage {
                                 VStack {
                                     Spacer()
                                     
-                                    Text(error)
+                                    Text(errorMessage)
                                         .font(.system(size: 14))
                                         .foregroundColor(.white)
                                         .padding(.horizontal, 16)
@@ -463,7 +510,8 @@ struct ProfileView: View {
                                         .padding(.bottom, 8)
                                         .transition(.move(edge: .bottom).combined(with: .opacity))
                                 }
-                                .animation(.spring(response: 0.3, dampingFraction: 0.7), value: saveError)
+                                .padding(.bottom, 90)
+                                .animation(.spring(response: 0.3, dampingFraction: 0.7), value: errorMessage)
                                 .zIndex(1)
                             }
                         }
@@ -475,8 +523,9 @@ struct ProfileView: View {
                     
                     // Login Method
                     HStack {
-                        Image(systemName: "person.badge.key.fill")
-                            .foregroundColor(.green)
+                        Image(systemName: "person.badge.key")
+                            .foregroundColor(.white)
+                            .frame(width: 24, height: 24)
                         Text("Login Method:")
                             .foregroundColor(.white)
                         Spacer()
@@ -484,47 +533,82 @@ struct ProfileView: View {
                             switch providerID {
                             case "password":
                                 Text("Email/Password")
-                                    .foregroundColor(.gray)
+                                    .foregroundColor(.white.opacity(0.6))
                             case "google.com":
                                 Text("Google")
-                                    .foregroundColor(.gray)
+                                    .foregroundColor(.white.opacity(0.6))
                             default:
                                 Text(providerID)
-                                    .foregroundColor(.gray)
+                                    .foregroundColor(.white.opacity(0.6))
                             }
                         }
                     }
                     .padding(.vertical, 12)
                     .padding(.horizontal, 16)
-                    .background(Color.white.opacity(0.1))
-                    .cornerRadius(10)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(Color.white.opacity(0.03))
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10)
+                            .stroke(
+                                LinearGradient(
+                                    gradient: Gradient(colors: [.white.opacity(0.1), .white.opacity(0.05)]),
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                ),
+                                lineWidth: 0.5
+                            )
+                    )
                     .padding(.horizontal, 16)
                     
                     // App Version
                     HStack {
-                        Image(systemName: "info.circle.fill")
-                            .foregroundColor(.purple)
+                        Image(systemName: "info.circle")
+                            .foregroundColor(.white)
+                            .frame(width: 24, height: 24)
                         Text("App Version:")
                             .foregroundColor(.white)
                         Spacer()
                         Text(appVersion)
-                            .foregroundColor(.gray)
+                            .foregroundColor(.white.opacity(0.6))
                     }
                     .padding(.vertical, 12)
                     .padding(.horizontal, 16)
-                    .background(Color.white.opacity(0.1))
-                    .cornerRadius(10)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(Color.white.opacity(0.03))
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10)
+                            .stroke(
+                                LinearGradient(
+                                    gradient: Gradient(colors: [.white.opacity(0.1), .white.opacity(0.05)]),
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                ),
+                                lineWidth: 0.5
+                            )
+                    )
                     .padding(.horizontal, 16)
                     
                     // Sign Out Button
                     Button(action: { showSignOutAlert = true }) {
                         Text("Sign Out")
+                            .font(.system(size: 16, weight: .medium))
                             .foregroundColor(.black)
                             .frame(maxWidth: .infinity)
                             .frame(height: 50)
-                            .background(Color.white)
-                            .cornerRadius(10)
+                            .background(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .fill(Color.white)
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .stroke(Color.white.opacity(0.1), lineWidth: 0.5)
+                            )
                     }
+                    .buttonStyle(ScaleButtonStyle())
                     .padding(.horizontal, 30)
                     .padding(.top, 20)
                     .alert(isPresented: $showSignOutAlert) {
@@ -545,17 +629,32 @@ struct ProfileView: View {
                         showDeleteAccount = true
                     }) {
                         HStack {
-                            Image(systemName: "trash.fill")
-                                .foregroundColor(.red)
+                            Image(systemName: "trash")
+                                .foregroundColor(.white)
+                                .frame(width: 24, height: 24)
                             Text("Delete Account")
-                                .foregroundColor(.red)
+                                .foregroundColor(.white)
                             Spacer()
                         }
                         .padding(.vertical, 12)
                         .padding(.horizontal, 16)
-                        .background(Color.red.opacity(0.2))
-                        .cornerRadius(10)
+                        .background(
+                            RoundedRectangle(cornerRadius: 10)
+                                .fill(Color.white.opacity(0.05))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .stroke(
+                                            LinearGradient(
+                                                gradient: Gradient(colors: [.white.opacity(0.2), .white.opacity(0.05)]),
+                                                startPoint: .topLeading,
+                                                endPoint: .bottomTrailing
+                                            ),
+                                            lineWidth: 0.5
+                                        )
+                                )
+                        )
                     }
+                    .buttonStyle(ScaleButtonStyle())
                     .padding(.horizontal, 16)
                     .alert(isPresented: $showDeleteAccount) {
                         Alert(
@@ -584,6 +683,13 @@ struct ProfileView: View {
             Task {
                 await loadUserPreferences()
             }
+            
+            // Listen for bookmark count changes
+            NotificationCenter.default.addObserver(forName: NSNotification.Name("BookmarkCountChanged"), object: nil, queue: .main) { _ in
+                Task {
+                    await fetchBookmarkCount()
+                }
+            }
         }
     }
     
@@ -600,10 +706,22 @@ struct ProfileView: View {
             if let regionValue = prefs["region"] as? String {
                 selectedRegion = regionValue
             }
+            
+            // Also fetch bookmark count
+            await fetchBookmarkCount()
         } catch {
             // Silently fail, using defaults
         }
         isLoading = false
+    }
+    
+    private func fetchBookmarkCount() async {
+        do {
+            let count = try await authService.getBookmarkCount()
+            bookmarkCount = count
+        } catch {
+            // Silently fail, keep default value
+        }
     }
 }
 
@@ -614,13 +732,24 @@ struct ProfileSectionHeader: View {
     var body: some View {
         HStack {
             Text(title)
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundColor(.gray)
+                .font(.system(size: 14, weight: .medium))
+                .foregroundColor(.white.opacity(0.6))
+                .tracking(0.5)
+            
             Spacer()
+            
+            Rectangle()
+                .fill(LinearGradient(
+                    gradient: Gradient(colors: [.white.opacity(0.1), .white.opacity(0.05)]),
+                    startPoint: .leading,
+                    endPoint: .trailing
+                ))
+                .frame(height: 0.5)
+                .frame(maxWidth: 120)
         }
         .padding(.horizontal, 16)
         .padding(.top, 24)
-        .padding(.bottom, 8)
+        .padding(.bottom, 10)
     }
 }
 
@@ -629,17 +758,24 @@ struct StatCard: View {
     let value: String
     let label: String
     let icon: String
-    let color: Color
+    let color: Color // Keeping for backward compatibility
     @State private var appear = false
+    @State private var hover = false
     
     var body: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 10) {
             Image(systemName: icon)
-                .font(.system(size: 20))
-                .foregroundColor(color)
+                .font(.system(size: 20, weight: .light))
+                .foregroundColor(.white)
                 .frame(width: 40, height: 40)
-                .background(color.opacity(0.2))
+                .background(Color.white.opacity(0.05))
                 .clipShape(Circle())
+                .overlay(
+                    Circle()
+                        .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                )
+                .scaleEffect(hover ? 1.05 : 1.0)
+                .shadow(color: Color.white.opacity(hover ? 0.1 : 0), radius: 10, x: 0, y: 5)
             
             Text(value)
                 .font(.system(size: 18, weight: .bold))
@@ -651,11 +787,18 @@ struct StatCard: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 16)
-        .background(Color.white.opacity(0.05))
+        .background(Color.white.opacity(0.03))
         .cornerRadius(16)
         .overlay(
             RoundedRectangle(cornerRadius: 16)
-                .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                .stroke(
+                    LinearGradient(
+                        gradient: Gradient(colors: [.white.opacity(0.1), .white.opacity(0.05)]),
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 1
+                )
         )
         .offset(y: appear ? 0 : 20)
         .opacity(appear ? 1 : 0)
@@ -664,6 +807,7 @@ struct StatCard: View {
                 appear = true
             }
         }
+        .hoverEffect($hover)
     }
 }
 
@@ -671,6 +815,17 @@ struct StatCard: View {
 extension View {
     func cornerRadius(_ radius: CGFloat, corners: UIRectCorner) -> some View {
         clipShape(RoundedCorner(radius: radius, corners: corners))
+    }
+    
+    // Safe hover effect that works on macOS and is silent on iOS
+    @ViewBuilder func hoverEffect(_ isHovering: Binding<Bool>) -> some View {
+        #if os(macOS)
+        self.onHover { hover in
+            isHovering.wrappedValue = hover
+        }
+        #else
+        self
+        #endif
     }
 }
 
@@ -681,6 +836,16 @@ struct RoundedCorner: Shape {
     func path(in rect: CGRect) -> Path {
         let path = UIBezierPath(roundedRect: rect, byRoundingCorners: corners, cornerRadii: CGSize(width: radius, height: radius))
         return Path(path.cgPath)
+    }
+}
+
+// Button style with scale animation for better interaction feedback
+struct ScaleButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.94 : 1)
+            .brightness(configuration.isPressed ? 0.05 : 0)
+            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: configuration.isPressed)
     }
 }
 
@@ -697,6 +862,7 @@ struct BookmarksProfileView: View {
     @State private var errorMessage = ""
     @State private var showArticle = false
     @State private var selectedArticleURL: URL? = nil
+    @State private var listRefreshTrigger = false
     @Environment(\.presentationMode) var presentationMode
     
     var body: some View {
@@ -735,18 +901,41 @@ struct BookmarksProfileView: View {
                         }
                         .padding()
                     }
+                    .refreshable {
+                        await loadBookmarks()
+                    }
                 }
             }
             .navigationTitle("Saved Articles")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Back") {
+                    Button(action: {
                         presentationMode.wrappedValue.dismiss()
+                    }) {
+                        HStack(spacing: 3) {
+                            Image(systemName: "chevron.left")
+                                .font(.system(size: 14, weight: .medium))
+                            Text("Back")
+                                .font(.system(size: 16, weight: .medium))
+                        }
+                        .foregroundColor(.white)
                     }
+                    .buttonStyle(ScaleButtonStyle())
+                }
+                
+                ToolbarItem(placement: .principal) {
+                    Text("Saved Articles")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundColor(.white)
                 }
             }
             .onAppear {
+                Task {
+                    await loadBookmarks()
+                }
+            }
+            .onChange(of: listRefreshTrigger) { _ in
                 Task {
                     await loadBookmarks()
                 }
@@ -777,9 +966,20 @@ struct BookmarksProfileView: View {
         Task {
             do {
                 try await authService.removeBookmark(article)
-                // Remove from local list
-                if let index = articles.firstIndex(where: { $0.id == article.id }) {
-                    articles.remove(at: index)
+                
+                // Update UI on main thread
+                await MainActor.run {
+                    // Remove from local list for immediate feedback
+                    if let index = articles.firstIndex(where: { $0.id == article.id }) {
+                        articles.remove(at: index)
+                    }
+                    
+                    // Success haptic feedback
+                    let generator = UINotificationFeedbackGenerator()
+                    generator.notificationOccurred(.success)
+                    
+                    // Trigger parent profile view to refresh bookmark count
+                    NotificationCenter.default.post(name: NSNotification.Name("BookmarkCountChanged"), object: nil)
                 }
             } catch {
                 errorMessage = "Failed to remove bookmark: \(error.localizedDescription)"
@@ -793,6 +993,8 @@ struct SavedArticleCard: View {
     let article: NewsArticle
     let onRead: () -> Void
     let onRemove: () -> Void
+    @State private var isRemoving = false
+    @State private var isHovering = false
     
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -802,9 +1004,13 @@ struct SavedArticleCard: View {
                         switch phase {
                         case .empty:
                             Rectangle()
-                                .fill(Color.gray.opacity(0.2))
+                                .fill(Color.white.opacity(0.05))
                                 .frame(width: 80, height: 80)
                                 .cornerRadius(8)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .stroke(Color.white.opacity(0.1), lineWidth: 0.5)
+                                )
                         case .success(let image):
                             image
                                 .resizable()
@@ -812,66 +1018,131 @@ struct SavedArticleCard: View {
                                 .frame(width: 80, height: 80)
                                 .cornerRadius(8)
                                 .clipped()
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .stroke(Color.white.opacity(0.1), lineWidth: 0.5)
+                                )
                         case .failure:
                             Rectangle()
-                                .fill(Color.gray.opacity(0.2))
+                                .fill(Color.white.opacity(0.05))
                                 .frame(width: 80, height: 80)
                                 .cornerRadius(8)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .stroke(Color.white.opacity(0.1), lineWidth: 0.5)
+                                )
+                                .overlay(
+                                    Image(systemName: "photo")
+                                        .foregroundColor(.white.opacity(0.3))
+                                )
                         @unknown default:
                             Rectangle()
-                                .fill(Color.gray.opacity(0.2))
+                                .fill(Color.white.opacity(0.05))
                                 .frame(width: 80, height: 80)
                                 .cornerRadius(8)
                         }
                     }
                 } else {
                     Rectangle()
-                        .fill(Color.gray.opacity(0.2))
+                        .fill(Color.white.opacity(0.05))
                         .frame(width: 80, height: 80)
                         .cornerRadius(8)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8)
+                                .stroke(Color.white.opacity(0.1), lineWidth: 0.5)
+                        )
+                        .overlay(
+                            Image(systemName: "newspaper")
+                                .foregroundColor(.white.opacity(0.3))
+                        )
                 }
                 
-                VStack(alignment: .leading, spacing: 5) {
+                VStack(alignment: .leading, spacing: 6) {
                     Text(article.title)
-                        .font(.headline)
+                        .font(.system(size: 16, weight: .medium))
                         .foregroundColor(.white)
                         .lineLimit(3)
                     
                     Text(article.source)
-                        .font(.caption)
+                        .font(.system(size: 12, weight: .light))
                         .foregroundColor(.gray)
                     
-                    Text(article.publishedAt, style: .date)
-                        .font(.caption2)
-                        .foregroundColor(.gray)
+                    HStack {
+                        Image(systemName: "calendar")
+                            .font(.system(size: 10))
+                            .foregroundColor(.gray)
+                        Text(article.publishedAt, style: .date)
+                            .font(.system(size: 10, weight: .light))
+                            .foregroundColor(.gray)
+                    }
                 }
+                .padding(.leading, 8)
             }
             
             HStack {
                 Button(action: onRead) {
                     Text("Read Article")
-                        .font(.subheadline)
+                        .font(.system(size: 13, weight: .medium))
                         .foregroundColor(.white)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 8)
-                        .background(Color.blue.opacity(0.8))
-                        .cornerRadius(6)
+                        .background(
+                            RoundedRectangle(cornerRadius: 6)
+                                .fill(Color.white.opacity(0.1))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 6)
+                                        .stroke(Color.white.opacity(0.1), lineWidth: 0.5)
+                                )
+                        )
                 }
+                .buttonStyle(ScaleButtonStyle())
                 
                 Spacer()
                 
                 Button(action: onRemove) {
-                    Image(systemName: "trash")
-                        .foregroundColor(.red)
-                        .padding(8)
-                        .background(Color.red.opacity(0.2))
-                        .cornerRadius(6)
+                    HStack {
+                        if isRemoving {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                .scaleEffect(0.7)
+                        } else {
+                            Image(systemName: "trash")
+                                .font(.system(size: 13))
+                                .foregroundColor(.white.opacity(0.7))
+                        }
+                    }
+                    .frame(width: 20, height: 20)
+                    .padding(8)
+                    .background(
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(Color.white.opacity(0.05))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 6)
+                                    .stroke(Color.white.opacity(0.1), lineWidth: 0.5)
+                            )
+                    )
                 }
+                .buttonStyle(ScaleButtonStyle())
+                .disabled(isRemoving)
             }
         }
         .padding()
-        .background(Color.white.opacity(0.1))
-        .cornerRadius(12)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color.white.opacity(isHovering ? 0.05 : 0.03))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(
+                    LinearGradient(
+                        gradient: Gradient(colors: [.white.opacity(0.1), .white.opacity(0.05)]),
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 0.5
+                )
+        )
+        .hoverEffect($isHovering)
     }
 }
 
@@ -883,4 +1154,28 @@ struct SafariView: UIViewControllerRepresentable {
     }
     
     func updateUIViewController(_ uiViewController: SFSafariViewController, context: Context) {}
+}
+
+// Add this helper view for preference sections
+struct PreferenceSection<Content: View>: View {
+    let title: String
+    let content: Content
+    
+    init(title: String, @ViewBuilder content: () -> Content) {
+        self.title = title
+        self.content = content()
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text(title)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(.gray)
+                .padding(.horizontal, 4)
+            
+            VStack(spacing: 12) {
+                content
+            }
+        }
+    }
 } 

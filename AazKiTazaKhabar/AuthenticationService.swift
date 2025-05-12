@@ -199,6 +199,19 @@ class AuthenticationService: ObservableObject {
         }
     }
     
+    func isBookmarked(_ article: NewsArticle) async throws -> Bool {
+        guard let uid = user?.uid else { return false }
+        let docRef = db.collection("users").document(uid).collection("bookmarks").document(article.id.uuidString)
+        let doc = try await docRef.getDocument()
+        return doc.exists
+    }
+    
+    func getBookmarkCount() async throws -> Int {
+        guard let uid = user?.uid else { return 0 }
+        let snapshot = try await db.collection("users").document(uid).collection("bookmarks").getDocuments()
+        return snapshot.documents.count
+    }
+    
     // MARK: - User Preferences
     func saveUserPreferences(notificationsEnabled: Bool, darkModeEnabled: Bool, region: String) async throws {
         guard let uid = user?.uid else { return }

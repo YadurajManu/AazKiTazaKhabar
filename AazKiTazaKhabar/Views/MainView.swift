@@ -249,8 +249,10 @@ struct FilterChip: View {
 
 struct NewsCardView: View {
     let article: NewsArticle
+    @StateObject private var authService = AuthenticationService.shared
     @State private var showWeb = false
     @State private var isSaved = false
+    @State private var isBookmarkLoading = false
     @State private var showShareSheet = false
     @State private var isPressed = false
     @State private var showDetail = false
@@ -303,25 +305,27 @@ struct NewsCardView: View {
                     // Quick action buttons
                     HStack(spacing: 12) {
                         Button(action: {
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                isSaved.toggle()
-                            }
-                            // Play haptic feedback
-                            let generator = UIImpactFeedbackGenerator(style: .medium)
-                            generator.impactOccurred()
-                            
-                            // TODO: Connect to bookmark service
+                            toggleBookmark()
                         }) {
                             Circle()
                                 .fill(Color.black.opacity(0.7))
                                 .frame(width: 36, height: 36)
                                 .overlay(
-                                    Image(systemName: isSaved ? "bookmark.fill" : "bookmark")
-                                        .font(.system(size: 16))
-                                        .foregroundColor(isSaved ? .yellow : .white)
+                                    Group {
+                                        if isBookmarkLoading {
+                                            ProgressView()
+                                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                                .scaleEffect(0.7)
+                                        } else {
+                                            Image(systemName: isSaved ? "bookmark.fill" : "bookmark")
+                                                .font(.system(size: 16))
+                                                .foregroundColor(isSaved ? .yellow : .white)
+                                        }
+                                    }
                                 )
                         }
                         .scaleEffect(isSaved ? 1.1 : 1.0)
+                        .disabled(isBookmarkLoading)
                         
                         Button(action: {
                             showShareSheet = true
@@ -435,6 +439,69 @@ struct NewsCardView: View {
             let generator = UIImpactFeedbackGenerator(style: .light)
             generator.impactOccurred()
         }
+        .onAppear {
+            checkIfBookmarked()
+        }
+    }
+    
+    private func toggleBookmark() {
+        isBookmarkLoading = true
+        
+        // Play haptic feedback
+        let generator = UIImpactFeedbackGenerator(style: .medium)
+        generator.impactOccurred()
+        
+        Task {
+            do {
+                if isSaved {
+                    try await authService.removeBookmark(article)
+                    
+                    // Update UI state on main thread
+                    await MainActor.run {
+                        isSaved = false
+                        isBookmarkLoading = false
+                    }
+                    
+                    // Success feedback
+                    let feedbackGenerator = UINotificationFeedbackGenerator()
+                    feedbackGenerator.notificationOccurred(.success)
+                } else {
+                    try await authService.addBookmark(article)
+                    
+                    // Update UI state on main thread
+                    await MainActor.run {
+                        isSaved = true
+                        isBookmarkLoading = false
+                    }
+                    
+                    // Success feedback
+                    let feedbackGenerator = UINotificationFeedbackGenerator()
+                    feedbackGenerator.notificationOccurred(.success)
+                }
+            } catch {
+                // Update UI state on main thread
+                await MainActor.run {
+                    isBookmarkLoading = false
+                }
+                
+                // Error feedback
+                let feedbackGenerator = UINotificationFeedbackGenerator()
+                feedbackGenerator.notificationOccurred(.error)
+            }
+        }
+    }
+    
+    private func checkIfBookmarked() {
+        Task {
+            do {
+                let bookmarked = try await authService.isBookmarked(article)
+                await MainActor.run {
+                    isSaved = bookmarked
+                }
+            } catch {
+                // Silently fail, defaulting to not bookmarked
+            }
+        }
     }
     
     private func formattedDate(_ date: Date) -> String {
@@ -532,9 +599,241 @@ struct InAppWebViewSheet: View {
 }
 
 struct BookmarksView: View {
+    @StateObject private var authService = AuthenticationService.shared
+    @State private var articles: [NewsArticle] = []
+    @State private var isLoading = true
+    @State private var errorMessage: String? = nil
+    @State private var showArticle = false
+    @State private var selectedArticleURL: URL? = nil
+    @State private var listRefreshTrigger = false  // Added to trigger refreshes
+    
     var body: some View {
-        Text("Bookmarks will appear here")
-            .foregroundColor(.white)
+        ZStack {
+            Color.black.ignoresSafeArea()
+            
+            if isLoading {
+                ProgressView()
+                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                    .scaleEffect(1.5)
+            } else if articles.isEmpty {
+                VStack(spacing: 20) {
+                    Image(systemName: "bookmark.slash")
+                        .font(.system(size: 60))
+                        .foregroundColor(.gray)
+                    Text("No Saved Articles")
+                        .font(.title2)
+                        .foregroundColor(.white)
+                    Text("Bookmark articles to see them here")
+                        .foregroundColor(.gray)
+                }
+            } else {
+                ScrollView {
+                    LazyVStack(spacing: 16) {
+                        ForEach(articles) { article in
+                            BookmarkCard(article: article, onRemove: {
+                                removeBookmark(article)
+                            })
+                            .onTapGesture {
+                                if let url = URL(string: article.url) {
+                                    selectedArticleURL = url
+                                    showArticle = true
+                                }
+                            }
+                        }
+                    }
+                    .padding()
+                }
+                .refreshable {
+                    await loadBookmarks()
+                }
+            }
+            
+            if let errorMessage = errorMessage {
+                VStack {
+                    Spacer()
+                    Text(errorMessage)
+                        .font(.caption)
+                        .foregroundColor(.white)
+                        .padding()
+                        .background(Color.red.opacity(0.8))
+                        .cornerRadius(8)
+                        .padding(.bottom, 20)
+                }
+            }
+        }
+        .onAppear {
+            Task {
+                await loadBookmarks()
+            }
+        }
+        .onChange(of: listRefreshTrigger) { _ in
+            Task {
+                await loadBookmarks()
+            }
+        }
+        .sheet(isPresented: $showArticle) {
+            if let url = selectedArticleURL {
+                SafariView(url: url)
+            }
+        }
+    }
+    
+    private func loadBookmarks() async {
+        isLoading = true
+        do {
+            articles = try await authService.fetchBookmarks()
+        } catch {
+            errorMessage = "Failed to load bookmarks: \(error.localizedDescription)"
+        }
+        isLoading = false
+    }
+    
+    private func removeBookmark(_ article: NewsArticle) {
+        Task {
+            do {
+                try await authService.removeBookmark(article)
+                
+                // Update UI on main thread
+                await MainActor.run {
+                    // Remove from local list for immediate feedback
+                    if let index = articles.firstIndex(where: { $0.id == article.id }) {
+                        articles.remove(at: index)
+                    }
+                    
+                    // Success haptic feedback
+                    let generator = UINotificationFeedbackGenerator()
+                    generator.notificationOccurred(.success)
+                    
+                    // Refresh the list
+                    listRefreshTrigger.toggle()
+                }
+            } catch {
+                await MainActor.run {
+                    errorMessage = "Failed to remove bookmark: \(error.localizedDescription)"
+                    
+                    // Error feedback
+                    let generator = UINotificationFeedbackGenerator()
+                    generator.notificationOccurred(.error)
+                }
+            }
+        }
+    }
+}
+
+struct BookmarkCard: View {
+    let article: NewsArticle
+    let onRemove: () -> Void
+    @State private var isRemoving = false
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top) {
+                if let imageUrl = article.imageUrl, let url = URL(string: imageUrl) {
+                    AsyncImage(url: url) { phase in
+                        switch phase {
+                        case .empty:
+                            Rectangle()
+                                .fill(Color.gray.opacity(0.2))
+                                .frame(width: 80, height: 80)
+                                .cornerRadius(8)
+                        case .success(let image):
+                            image
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                                .frame(width: 80, height: 80)
+                                .cornerRadius(8)
+                                .clipped()
+                        case .failure:
+                            Rectangle()
+                                .fill(Color.gray.opacity(0.2))
+                                .frame(width: 80, height: 80)
+                                .cornerRadius(8)
+                                .overlay(
+                                    Image(systemName: "photo")
+                                        .foregroundColor(.white.opacity(0.5))
+                                )
+                        @unknown default:
+                            Rectangle()
+                                .fill(Color.gray.opacity(0.2))
+                                .frame(width: 80, height: 80)
+                                .cornerRadius(8)
+                        }
+                    }
+                } else {
+                    Rectangle()
+                        .fill(Color.gray.opacity(0.2))
+                        .frame(width: 80, height: 80)
+                        .cornerRadius(8)
+                        .overlay(
+                            Image(systemName: "newspaper")
+                                .foregroundColor(.white.opacity(0.5))
+                        )
+                }
+                
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(article.title)
+                        .font(.headline)
+                        .foregroundColor(.white)
+                        .lineLimit(3)
+                    
+                    Text(article.source)
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                    
+                    HStack {
+                        Image(systemName: "calendar")
+                            .font(.caption2)
+                            .foregroundColor(.gray)
+                        Text(article.publishedAt, style: .date)
+                            .font(.caption2)
+                            .foregroundColor(.gray)
+                    }
+                }
+                .padding(.leading, 8)
+            }
+            
+            HStack {
+                Button(action: {
+                    if let url = URL(string: article.url) {
+                        UIApplication.shared.open(url)
+                    }
+                }) {
+                    Text("Read Article")
+                        .font(.subheadline)
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(Color.blue.opacity(0.8))
+                        .cornerRadius(6)
+                }
+                
+                Spacer()
+                
+                Button(action: {
+                    isRemoving = true
+                    onRemove()
+                }) {
+                    HStack {
+                        if isRemoving {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                .scaleEffect(0.7)
+                        } else {
+                            Image(systemName: "trash")
+                                .foregroundColor(.white)
+                        }
+                    }
+                    .frame(width: 20, height: 20)
+                    .padding(8)
+                    .background(Color.red.opacity(0.2))
+                    .cornerRadius(6)
+                }
+                .disabled(isRemoving)
+            }
+        }
+        .padding()
+        .background(Color.white.opacity(0.1))
+        .cornerRadius(12)
     }
 }
 
